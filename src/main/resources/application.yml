@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: token-status-list-cli
+  shell:
+    interactive:
+      enabled: true
+  ssl:
+    bundle:
+      pem:
+        status-list-issuer:
+          key:
+            alias: status-list-issuer
+          keystore:
+            certificate: classpath:issuer.cer.pem
+            private-key: classpath:issuer.key.pem
+
+status-list:
+  path: ./
+  uri: https://example.com/statuslists/1
+  expires: 365d
+  time-to-live: 1d

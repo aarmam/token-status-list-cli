@@ -11,11 +11,22 @@ spring:
           key:
             alias: status-list-issuer
           keystore:
-            certificate: classpath:issuer.cer.pem
-            private-key: classpath:issuer.key.pem
+            certificate: classpath:doc_signer_mdl_issuer.cer.pem
+            private-key: classpath:doc_signer_mdl_issuer.key.pem
 
 status-list:
   path: ./
-  uri: https://example.com/statuslists/1
-  expires: 365d
+  uri: https://aarmam.github.io/statuslists/2
+  # Optional Status List Aggregation URI embedded in the list (Section 9.2)
+  aggregation-uri: ""
+  # OID of the id-kp-oauthStatusSigning extended key usage (Section 10). Its final arc is
+  # still TBD in the draft; set it once IANA assigns one and the sign command will warn
+  # when the signing certificate does not carry it. Expected to become 1.3.6.1.5.5.7.3.<n>.
+  signing-eku-oid: ""
+  # exp marks the point after which the token MUST NOT be relied upon, ttl how long it
+  # may be cached before checking for a fresh copy (Section 13.7). The specification sets
+  # no fixed bounds - Section 11.5 says reasonable values depend on the use case - but exp
+  # should stay close enough to ttl that a Relying Party which ignores ttl still refetches
+  # within a sensible window. Raise it if this deployment re-signs less often.
+  expires: 30d
   time-to-live: 1d

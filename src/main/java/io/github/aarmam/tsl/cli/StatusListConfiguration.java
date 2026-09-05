@@ -11,6 +11,8 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 
 @Configuration
 public class StatusListConfiguration {
@@ -22,5 +24,16 @@ public class StatusListConfiguration {
         SslBundleKey key = bundle.getKey();
         String password = key.getPassword();
         return keyStore.getKey(key.getAlias(), password != null ? password.toCharArray() : null);
+    }
+
+    /**
+     * The certificate the Status List Tokens are signed under, so the signing command can
+     * report on the extended key usage described in Section 10 of the specification.
+     */
+    @Bean
+    public X509Certificate signingCertificate(SslBundles sslBundles) throws KeyStoreException {
+        SslBundle bundle = sslBundles.getBundle("status-list-issuer");
+        Certificate certificate = bundle.getStores().getKeyStore().getCertificate(bundle.getKey().getAlias());
+        return certificate instanceof X509Certificate x509 ? x509 : null;
     }
 }

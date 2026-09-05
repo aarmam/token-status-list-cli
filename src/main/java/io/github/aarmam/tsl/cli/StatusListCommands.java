@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -33,6 +35,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class StatusListCommands {
     private final Key signingKey;
+    private final X509Certificate signingCertificate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${status-list.path}")
@@ -45,6 +48,8 @@ public class StatusListCommands {
     private Duration ttl;
     @Value("${status-list.aggregation-uri:}")
     private String aggregationUri;
+    @Value("${status-list.signing-eku-oid:}")
+    private String signingEkuOid;
     @Value("${spring.ssl.bundle.pem.status-list-issuer.key.alias}")
     private String keyId;
 
@@ -113,6 +118,8 @@ public class StatusListCommands {
                 .keyId(keyId)
                 .signingKey(signingKey)
                 .build();
+        warnIfSigningEkuMissing();
+
         if ("JWT".equalsIgnoreCase(statusListTokenType)) {
             Files.write(Paths.get(path, "status_list_token.jwt"), statusListToken.toSignedJWT().getBytes());
         } else if ("CWT".equalsIgnoreCase(statusListTokenType)) {
@@ -126,6 +133,30 @@ public class StatusListCommands {
             throw new IllegalArgumentException("Unsupported status list token type: " + statusListTokenType);
         }
         return "Status list token signed";
+    }
+
+    /**
+     * Warns when the signing certificate does not carry the extended key usage that
+     * delegates Status List Token signing authority.
+     * <p>
+     * Section 10 defines id-kp-oauthStatusSigning for this, but its final OID arc is still
+     * TBD in the draft, so the value to look for is configured rather than hardcoded. Set
+     * status-list.signing-eku-oid once IANA assigns it to have the CLI check for it.
+     */
+    private void warnIfSigningEkuMissing() {
+        if (!StringUtils.hasText(signingEkuOid) || signingCertificate == null) {
+            return;
+        }
+        try {
+            List<String> extendedKeyUsage = signingCertificate.getExtendedKeyUsage();
+            if (extendedKeyUsage == null || !extendedKeyUsage.contains(signingEkuOid)) {
+                log.warn("Signing certificate {} does not carry the status list signing EKU {}; " +
+                                "a Relying Party enforcing Section 10 will reject tokens signed with it",
+                        signingCertificate.getSubjectX500Principal(), signingEkuOid);
+            }
+        } catch (CertificateParsingException e) {
+            log.warn("Could not read the extended key usage of the signing certificate", e);
+        }
     }
 
     private StatusList loadStatusList(String statusListEncoding) throws IOException {

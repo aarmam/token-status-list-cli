@@ -20,6 +20,7 @@ import java.nio.file.Paths;
 import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 
@@ -91,7 +92,12 @@ public class StatusListCommands {
         if ("JWT".equalsIgnoreCase(statusListTokenType)) {
             Files.write(Paths.get(path, "status_list_token.jwt"), statusListToken.toSignedJWT().getBytes());
         } else if ("CWT".equalsIgnoreCase(statusListTokenType)) {
-            Files.write(Paths.get(path, "status_list_token.cwt"), statusListToken.toSignedCWT().getBytes());
+            // Section 8.2: an application/statuslist+cwt body is the raw binary encoding;
+            // the hex in the specification's examples is for readability only. Sign once -
+            // ECDSA is randomised, so signing twice would put a different token in each file.
+            byte[] cwt = statusListToken.toSignedCWTBytes();
+            Files.write(Paths.get(path, "status_list_token.cwt"), cwt);
+            Files.write(Paths.get(path, "status_list_token.cwt.hex"), HexFormat.of().formatHex(cwt).getBytes());
         } else {
             throw new IllegalArgumentException("Unsupported status list token type: " + statusListTokenType);
         }

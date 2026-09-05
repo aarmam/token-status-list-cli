@@ -37,4 +37,7 @@ build/
 /status_list.cbor
 /status_list_token.jwt
 /status_list_token.cwt
+/status_list_token.cwt.hex
+/status_list.txt
+/status_list_aggregation.json
 /token-status-list-cli.log

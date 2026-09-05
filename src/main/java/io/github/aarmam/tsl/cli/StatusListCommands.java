@@ -7,6 +7,7 @@ import io.github.aarmam.tsl.StatusList;
 import io.github.aarmam.tsl.StatusListToken;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.shell.command.annotation.Command;
 import org.springframework.shell.command.annotation.Option;
@@ -22,6 +23,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @Command
 @RequiredArgsConstructor
 public class StatusListCommands {
@@ -51,7 +53,10 @@ public class StatusListCommands {
 
     @Command(command = "load", alias = "l", description = "Loads the status list in JSON or CBOR Hex format")
     public String load(@Option(defaultValue = "JSON", description = "Status list encoding JSON or CBOR") String statusListEncoding) throws IOException {
-        statusList = getStatusList(statusListEncoding);
+        statusList = loadStatusList(statusListEncoding);
+
+        Files.write(Paths.get(path, "status_list.txt"), statusList.printStatuses().getBytes());
+
         return "Status list loaded";
     }
 
@@ -93,7 +98,7 @@ public class StatusListCommands {
         return "Status list token signed";
     }
 
-    private StatusList getStatusList(String statusListEncoding) throws IOException {
+    private StatusList loadStatusList(String statusListEncoding) throws IOException {
         if ("JSON".equalsIgnoreCase(statusListEncoding)) {
             Path fullPath = Paths.get(path, "status_list.json");
             if (Files.exists(fullPath)) {

@@ -11,11 +11,11 @@ spring:
           key:
             alias: status-list-issuer
           keystore:
-            certificate: classpath:issuer.cer.pem
-            private-key: classpath:issuer.key.pem
+            certificate: classpath:doc_signer_mdl_issuer.cer.pem
+            private-key: classpath:doc_signer_mdl_issuer.key.pem
 
 status-list:
   path: ./
-  uri: https://example.com/statuslists/1
-  expires: 365d
+  uri: https://aarmam.github.io/statuslists/2
+  expires: 3650d
   time-to-live: 1d

@@ -17,5 +17,7 @@ spring:
 status-list:
   path: ./
   uri: https://aarmam.github.io/statuslists/2
+  # Optional Status List Aggregation URI embedded in the list (Section 9.2)
+  aggregation-uri: ""
   expires: 3650d
   time-to-live: 1d

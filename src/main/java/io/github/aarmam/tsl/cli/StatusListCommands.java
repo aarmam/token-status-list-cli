@@ -4,6 +4,7 @@ import com.authlete.cose.COSEException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import io.github.aarmam.tsl.StatusList;
+import io.github.aarmam.tsl.StatusListAggregation;
 import io.github.aarmam.tsl.StatusListToken;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.shell.command.annotation.Command;
 import org.springframework.shell.command.annotation.Option;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -21,6 +23,8 @@ import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -39,6 +43,8 @@ public class StatusListCommands {
     private Duration expires;
     @Value("${status-list.time-to-live}")
     private Duration ttl;
+    @Value("${status-list.aggregation-uri:}")
+    private String aggregationUri;
     @Value("${spring.ssl.bundle.pem.status-list-issuer.key.alias}")
     private String keyId;
 
@@ -46,10 +52,28 @@ public class StatusListCommands {
 
     @Command(command = "generate", description = "Generates the status list in specified format")
     public String generate(@Option(defaultValue = "1") Integer bits, @Option(defaultValue = "1048576") Integer size,
-                           @Option(defaultValue = "JSON", description = "Status list encoding JSON or CBOR") String statusListEncoding) throws IOException {
-        statusList = new StatusList(size, bits);
+                           @Option(defaultValue = "JSON", description = "Status list encoding JSON or CBOR") String statusListEncoding,
+                           @Option(description = "Status List Aggregation URI to embed in the list, overriding status-list.aggregation-uri") String aggregationUri) throws IOException {
+        String uriToEmbed = StringUtils.hasText(aggregationUri) ? aggregationUri : this.aggregationUri;
+        statusList = new StatusList(size, bits, StringUtils.hasText(uriToEmbed) ? uriToEmbed : null);
         saveStatusList(statusList, statusListEncoding);
         return "Status list token generated";
+    }
+
+    @Command(command = "aggregate", description = "Writes a Status List Aggregation listing the given Status List Token URIs")
+    public String aggregate(@Option(description = "Comma separated Status List Token URIs; defaults to the configured status-list.uri")
+                            String statusListUris) throws IOException {
+        List<String> uris = StringUtils.hasText(statusListUris)
+                ? Arrays.stream(statusListUris.split(",")).map(String::trim).filter(StringUtils::hasText).toList()
+                : List.of(uri.toString());
+
+        StatusListAggregation aggregation = StatusListAggregation.builder()
+                .statusLists(uris)
+                .build();
+        Files.write(Paths.get(path, "status_list_aggregation.json"), aggregation.encodeAsJson().getBytes());
+
+        return "Status list aggregation written with %d status list(s), serve it as %s"
+                .formatted(uris.size(), StatusListAggregation.MEDIA_TYPE);
     }
 
     @Command(command = "load", alias = "l", description = "Loads the status list in JSON or CBOR Hex format")
